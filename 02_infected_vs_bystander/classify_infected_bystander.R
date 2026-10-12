@@ -7,12 +7,13 @@
 #   A low level of viral reads is detectable in every library, including cells
 #   that were never productively infected. This residual signal comes from the
 #   inoculum left in the culture medium and it prevents a simple zero/non-zero
-#   cut-off. The total viral expression across a population of cells is instead
-#   bimodal, so the two populations are separated by fitting a two-component
-#   mixture model rather than by choosing an arbitrary threshold.
+#   cut-off. The expression of the marker gene across a population of cells is
+#   instead bimodal, so the two populations are separated by fitting a
+#   two-component mixture model rather than by choosing an arbitrary threshold.
 #
 # Method
-#   1. Sum the FPKM values of the viral genes in each cell and log1p transform.
+#   1. Log1p transform the FPKM of the single marker gene that the infection
+#      readout is based on, which is the NP row of the matrix.
 #   2. Estimate a background distribution from the pre-infection time point,
 #      where no productive infection can have occurred yet.
 #   3. Fit a two-component Gaussian mixture with the EM algorithm at the
@@ -22,13 +23,17 @@
 #      the component with the higher mean to the infected population.
 #   5. Report the posterior classification probability of every cell and the
 #      implied decision boundary.
+#   6. Verify that the cells called infected carry the signal in every viral
+#      segment and not only in the marker gene.
 #
 # Input
 #   A gene-by-cell expression matrix in FPKM. The file may be .xlsx, .csv or
-#   .tsv. Column names must follow the <CellID>.<TimePoint> convention.
+#   .tsv. Column names must follow the <CellID>.<TimePoint> convention, for
+#   example WSN01.0, WSN01.3, WSN01.6. The marker gene and the viral genes are
+#   located by name.
 #
 # Output (written to --output-dir)
-#   cell_classification.csv    one row per cell, with total viral expression,
+#   cell_classification.csv    one row per cell, with the classifying value,
 #                              assigned population and posterior probability
 #   classification_summary.txt fitted mixture parameters, decision boundary and
 #                              population sizes
@@ -42,8 +47,13 @@
 #           --output-dir ./results_classification
 #
 # Optional flags
+#   --classify-gene NAME   row name of the marker gene whose log1p-transformed
+#                        FPKM drives the classification. When omitted, the NP
+#                        row is located by suffix, so NP, WSN_NP and IAV_NP all
+#                        work without further configuration.
 #   --viral-genes PB2,PB1,PA,HA,NP,NA,M,NS
-#                        explicit viral gene row names. Takes precedence over
+#                        explicit viral gene row names, used for the
+#                        per-segment validation. Takes precedence over
 #                        --viral-pattern
 #   --viral-pattern REGEX  row names matching this pattern are treated as viral
 #                        (default ^WSN_)
@@ -61,12 +71,13 @@ source(file.path(dirname(dirname(normalizePath(.self))), "R", "common.R"))
 rm(.self)
 
 USAGE <- "Usage: Rscript classify_infected_bystander.R --fpkm FILE --output-dir DIR
-       [--viral-genes LIST | --viral-pattern REGEX] [--background-time N]
-       [--classify-time N] [--model-name E|V]"
+       [--classify-gene NAME] [--viral-genes LIST | --viral-pattern REGEX]
+       [--background-time N] [--classify-time N] [--model-name E|V]"
 
 opt <- parse_cli(list(
   fpkm            = NULL,
   `output-dir`    = NULL,
+  `classify-gene` = "",
   `viral-genes`   = "",
   `viral-pattern` = "^WSN_",
   `background-time` = NA_real_,
@@ -78,12 +89,17 @@ if (!requireNamespace("mclust", quietly = TRUE)) {
   stop("Package 'mclust' is required. Install it with install.packages('mclust')",
        call. = FALSE)
 }
+# Attached rather than merely loaded. Mclust() with a prior looks up mclustBIC on
+# the search path, which a namespace-only reference does not provide.
+suppressPackageStartupMessages(library(mclust))
 
 ensure_dir(opt[["output-dir"]])
 
 # --------------------------------------------------------------- 1. read in ---
 step("Reading expression matrix: ", opt$fpkm)
-expr <- as_numeric_matrix(read_matrix(opt$fpkm))
+# Coerced to a matrix so that a single-row or single-block subset stays numeric
+# and can be passed straight to log1p, is.finite and colMeans.
+expr <- as.matrix(as_numeric_matrix(read_matrix(opt$fpkm)))
 meta <- parse_samples(colnames(expr))
 expr <- expr[, meta$sample, drop = FALSE]
 
@@ -91,7 +107,21 @@ note(length(rownames(expr)), " genes x ", ncol(expr), " cells")
 note("Time points: ", paste(sort(unique(meta$time)), collapse = ", "))
 note("Cells: ", length(unique(meta$cell_id)))
 
-# ------------------------------------------------------------ 2. viral genes ---
+# -------------------------------------------------- 2. marker and viral genes ---
+classify_gene <- opt[["classify-gene"]]
+if (!nzchar(classify_gene)) {
+  hits <- grep("(^|_)NP$", rownames(expr), value = TRUE)
+  if (length(hits) != 1L) {
+    stop("The NP row could not be identified unambiguously, ", length(hits),
+         " rows matched. Pass --classify-gene explicitly.", call. = FALSE)
+  }
+  classify_gene <- hits
+} else if (!classify_gene %in% rownames(expr)) {
+  stop("The marker gene '", classify_gene, "' is not present in the matrix",
+       call. = FALSE)
+}
+step("Marker gene used for the classification: ", classify_gene)
+
 viral <- split_csv(opt[["viral-genes"]])
 viral <- viral[nzchar(viral)]
 if (length(viral) == 0) {
@@ -107,18 +137,30 @@ if (length(viral) == 0) {
   stop("No viral genes found. Pass --viral-genes explicitly or adjust --viral-pattern",
        call. = FALSE)
 }
-step("Viral genes used: ", paste(viral, collapse = ", "))
+step("Viral genes used for the per-segment validation: ",
+     paste(viral, collapse = ", "))
 
-# --------------------------------------------- 3. total viral load per cell ---
+# ------------------------------------------------------ 3. classifying value ---
+# The classification is driven by the marker gene alone, so that the two
+# populations are separated on the same quantity that the infection readout is
+# based on. The full viral block is still extracted because it is used below to
+# check that the cells called infected carry the signal in every segment.
+classify_vals <- expr[classify_gene, ]
+if (any(!is.finite(classify_vals))) {
+  note("Non-finite values found for ", classify_gene, " and replaced by 0")
+  classify_vals[!is.finite(classify_vals)] <- 0
+}
+classify_vals <- log1p(classify_vals)
+
 viral_mat <- expr[viral, , drop = FALSE]
 if (anyNA(viral_mat)) {
   note("Non-finite values found in the viral block and replaced by 0")
   viral_mat[!is.finite(viral_mat)] <- 0
 }
-total_viral <- log1p(rowSums(viral_mat))
 
 cell_df <- meta
-cell_df$total_viral <- total_viral[cell_df$sample]
+cell_df$classify_gene <- classify_gene
+cell_df$classify_value <- classify_vals[cell_df$sample]
 
 # ----------------------------------------------------- 4. background model ----
 bg_time <- opt[["background-time"]]
@@ -128,7 +170,7 @@ if (!bg_time %in% meta$time) {
        paste(sort(unique(meta$time)), collapse = ", "), call. = FALSE)
 }
 
-bg_vals <- cell_df$total_viral[cell_df$time == bg_time]
+bg_vals <- cell_df$classify_value[cell_df$time == bg_time]
 if (length(bg_vals) < 2) {
   stop("At least two cells are needed at the background time point, found ",
        length(bg_vals), call. = FALSE)
@@ -156,7 +198,7 @@ if (nrow(cls_df) < 4) {
 step("Fitting a two-component Gaussian mixture at time point ", cls_time,
      " (n = ", nrow(cls_df), ")")
 
-x <- cls_df$total_viral
+x <- cls_df$classify_value
 seed_means <- c(bg_mean, max(x) * 0.8)
 if (seed_means[2] <= seed_means[1]) {
   # Degenerate case where the upper seed collapses onto the background. Nudge it
@@ -173,7 +215,7 @@ fit <- mclust::Mclust(
 
 if (is.null(fit) || is.null(fit$classification)) {
   stop("The mixture model failed to converge. Try --model-name V or check that ",
-       "the total viral expression is genuinely bimodal", call. = FALSE)
+       "the expression of the marker gene is genuinely bimodal", call. = FALSE)
 }
 
 # ------------------------------------------------------- 6. label components ---
@@ -212,12 +254,13 @@ note("Infected  : ", n_inf, " cells")
 note("Bystander : ", n_bys, " cells")
 note("Infected fraction: ", fmt_num(inf_pct, 1), " %")
 
-# Sanity check that the assignment is biologically coherent. Cells called
-# infected should carry the viral signal in every segment, not only in one.
+# Sanity check that the assignment is biologically coherent. The classifier sees
+# the marker gene alone, so this verifies that the cells it called infected
+# carry the viral signal in every segment and not only in that one gene.
 if (n_inf > 0 && n_bys > 0) {
-  per_gene_inf <- colMeans(viral_mat[, cls_df$sample[cls_df$population == "Infected"],
+  per_gene_inf <- rowMeans(viral_mat[, cls_df$sample[cls_df$population == "Infected"],
                                      drop = FALSE])
-  per_gene_bys <- colMeans(viral_mat[, cls_df$sample[cls_df$population == "Bystander"],
+  per_gene_bys <- rowMeans(viral_mat[, cls_df$sample[cls_df$population == "Bystander"],
                                      drop = FALSE])
   note("Mean viral FPKM per segment, infected : ",
        paste(fmt_num(per_gene_inf, 2), collapse = ", "))
@@ -229,8 +272,9 @@ if (n_inf > 0 && n_bys > 0) {
 
 # ---------------------------------------------------------------- 8. outputs --
 out_csv <- file.path(opt[["output-dir"]], "cell_classification.csv")
-write_table(cls_df[, c("sample", "cell_id", "time", "total_viral",
-                       "population", "probability", "component")],
+write_table(cls_df[, c("sample", "cell_id", "time", "classify_gene",
+                       "classify_value", "population", "probability",
+                       "component")],
             out_csv)
 
 out_txt <- file.path(opt[["output-dir"]], "classification_summary.txt")
@@ -240,8 +284,10 @@ lines <- c(
   strrep("=", 64),
   "",
   paste0("Input matrix           : ", basename(opt$fpkm)),
+  paste0("Marker gene            : ", classify_gene),
+  paste0("Classifying value      : log1p(", classify_gene, " FPKM), that is ",
+         "ln(1 + ", classify_gene, " FPKM)"),
   paste0("Viral genes            : ", paste(viral, collapse = ", ")),
-  paste0("Total viral load       : log1p(sum of viral gene FPKM)"),
   paste0("Background time point  : ", bg_time, " h"),
   paste0("Classification time    : ", cls_time, " h"),
   paste0("Mixture model          : mclust, G = 2, modelNames = '",
@@ -251,8 +297,8 @@ lines <- c(
   "Background distribution",
   strrep("-", 64),
   paste0("  n cells              : ", length(bg_vals)),
-  paste0("  mean log1p total viral : ", fmt_num(bg_mean, 4)),
-  paste0("  sd   log1p total viral : ", fmt_num(bg_sd, 4)),
+  paste0("  mean classify value  : ", fmt_num(bg_mean, 4)),
+  paste0("  sd   classify value  : ", fmt_num(bg_sd, 4)),
   "",
   strrep("-", 64),
   "Fitted mixture",
