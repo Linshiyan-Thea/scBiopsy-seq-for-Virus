@@ -6,11 +6,6 @@ Diffusion pseudotime ordering of longitudinally sampled single cells
 ==============================================================================
 
 What it does
-    Because scViralTracer-seq samples the same living cell more than once, the
-    true temporal order of the libraries is known. Diffusion pseudotime is
-    computed without using that order, so agreement between the two is a
-    genuine test of whether the assay resolves infection as a coherent
-    transcriptional progression.
 
     1. Load the per-time-point count and FPKM matrices and merge them into one
        AnnData object.
