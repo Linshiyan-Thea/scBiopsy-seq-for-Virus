@@ -11,6 +11,26 @@ QC, separation of infected from bystander cells, differential expression, diffus
 pseudotime, within-cell coupling of host genes to viral load, prediction of viral load from
 the pre-infection transcriptome, and the comparison against bulk and droplet-based data.
 
+---
+
+## What is included, and what is not
+
+**Included.** All analysis scripts, their parameter defaults, the shared helper library and
+the environment specifications.
+
+**Deliberately not included.**
+
+* **Plotting code.** Every script writes result tables and, where a figure depends on a
+  derived quantity, the underlying source data as well. Figures are assembled separately.
+* **Raw data.** FASTQ files and expression matrices are deposited in a public data
+  repository.
+* **The droplet-based single-cell quantification.** Step 07 can consume either a
+  pre-computed correlation table or an expression matrix, because the upstream 10x
+  Genomics alignment and quantification is a standard published workflow.
+* **Reference genomes.** Build the STAR index from the host annotation and the viral
+  sequences yourself. Step 01 documents the exact reference that was used.
+
+---
 
 ## Requirements
 
@@ -58,6 +78,9 @@ pip install -r env/requirements.txt
 ```
 .
 ├── README.md
+├── .gitignore
+├── R/
+│   └── common.R                        shared CLI parsing, matrix IO, statistics
 ├── env/
 │   ├── environment.yml                 conda environment for Python and the CLI tools
 │   ├── requirements.txt                pip equivalent for the Python part
@@ -66,7 +89,7 @@ pip install -r env/requirements.txt
 │   ├── 01_align_and_quantify.sh        trimming, STAR, featureCounts, down-sampling
 │   └── 02_library_statistics.sh        consolidated per-library QC table
 ├── 02_infected_vs_bystander/
-│   └── classify_infected_bystander.R   two-component mixture on total viral load
+│   └── classify_infected_bystander.R   two-component mixture on the NP FPKM
 ├── 03_differential_expression/
 │   └── de_deseq2.R                     DESeq2, optionally with a per-cell blocking factor
 ├── 04_pseudotime/
@@ -134,7 +157,9 @@ here, in which the eight IAV WSN segments are prefixed with the strain name.
 | `WSN_NP` | 07 (bulk) |
 
 Override any of them with the `--viral-genes`, `--viral-gene` or `--viral-pattern` flag of
-the corresponding script.
+the corresponding script. Script 02 additionally needs the NP row on its own, because NP is
+the gene whose FPKM the classification is based on. That row is located by suffix, so `NP`,
+`WSN_NP` and `IAV_NP` all resolve to the same gene, and `--classify-gene` overrides it.
 
 ---
 
@@ -199,17 +224,20 @@ Rscript 02_infected_vs_bystander/classify_infected_bystander.R \
 ```
 
 Residual viral reads from the inoculum are present in every library, so a zero/non-zero
-cut-off does not separate the populations. The log-transformed total viral expression is
-bimodal instead, and a two-component Gaussian mixture with equal variance is fitted at the
-classification time point. The component means are seeded with the background estimated at
-the pre-infection time point and with the upper range of the observed values. The component
-with the lower fitted mean is reported as bystander and the other as infected, which is
-decided by the fit rather than assumed.
+cut-off does not separate the populations. The expression of NP is bimodal instead, and a
+two-component Gaussian mixture with equal variance is fitted at the classification time
+point to the log1p-transformed NP FPKM. The component means are seeded with the background
+estimated at the pre-infection time point and with the upper range of the observed values.
+The component with the lower fitted mean is reported as bystander and the other as infected,
+which is decided by the fit rather than assumed. Because the fit sees NP alone, the script
+also reports the mean FPKM of every viral segment in the two populations, so that an
+infected call can be checked against the whole viral block.
 
 | Flag | Default | Meaning |
 |---|---|---|
 | `--fpkm` | required | gene-by-cell FPKM matrix |
 | `--output-dir` | required | where the tables are written |
+| `--classify-gene` | NP row, located by suffix | row name of the marker gene the classification is based on |
 | `--viral-genes` | empty | explicit viral row names, overrides the pattern |
 | `--viral-pattern` | `^WSN_` | regular expression matching viral rows |
 | `--background-time` | smallest time point | time point defining the background |
@@ -279,10 +307,11 @@ are the unit in which the rest of the pipeline reports expression.
 
 Root placement is the one place where sampling time is used. The root is restricted to the
 libraries taken before infection and, within those, the library with the smallest first
-principal component is chosen so that the choice is deterministic. The neighbour graph, the
-diffusion map and the pseudotime values themselves are computed without reference to the
-time labels, which is what makes the subsequent agreement between pseudotime and recorded
-time a genuine test rather than a tautology.
+principal component is chosen so that the choice is deterministic. Anchoring the root fixes the
+direction of the axis and nothing else about the ordering. The neighbour graph, the diffusion
+map and the position of each library along the axis are read from the expression matrix alone,
+so the agreement between pseudotime and recorded time tests whether the expression geometry of
+the libraries follows the sampling order.
 
 Viral rows are set to zero before infection. Any viral read in a pre-infection library comes
 from the inoculum and not from transcription by that cell, so keeping it would place a cell
@@ -494,6 +523,13 @@ they are recorded here.
 
 ---
 
+## Citation
+
+If you use this code, please cite the manuscript. The diffusion pseudotime method is
+described in
+
+> Haghverdi L, Büttner M, Wolf FA, Buettner F, Theis FJ. Diffusion pseudotime robustly
+> reconstructs lineage branching. *Nat Methods*. 2016;13(10):845-848. doi:10.1038/nmeth.3971
 
 ## Licence
 
