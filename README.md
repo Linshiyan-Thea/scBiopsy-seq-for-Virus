@@ -76,7 +76,6 @@ pip install -r env/requirements.txt
 ## Directory layout
 
 ```
-.
 ├── README.md
 │   ├── environment.yml                 conda environment for Python and the CLI tools
 │   ├── requirements.txt                pip equivalent for the Python part
