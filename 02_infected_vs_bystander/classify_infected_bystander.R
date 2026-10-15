@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # ==============================================================================
-# scViralTracer-seq analysis pipeline
+# Longitudinal single-cell profiling of IAV infection: analysis pipeline
 # Classification of single cells into infected and bystander populations
 # ------------------------------------------------------------------------------
 # Rationale
