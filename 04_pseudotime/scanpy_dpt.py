@@ -6,6 +6,17 @@ Diffusion pseudotime ordering of longitudinally sampled single cells
 ==============================================================================
 
 What it does
+    Because scViralTracer-seq samples the same living cell more than once, the
+    true temporal order of the libraries is known. Diffusion pseudotime places
+    the libraries on a single axis that is derived from the expression matrix,
+    with the root anchored on a pre-infection library so that the direction of
+    the axis is fixed. The agreement between this ordering and the recorded
+    sampling times is then used to assess whether the assay resolves infection
+    as a coherent transcriptional progression.
+
+    The root selection is the only step that reads the recorded sampling time,
+    and it only sets the origin of the axis. The position of every library
+    along the axis follows from the expression matrix.
 
     1. Load the per-time-point count and FPKM matrices and merge them into one
        AnnData object.
@@ -17,6 +28,8 @@ What it does
     7. Correlate the expression of the eight viral genomic segments with
        pseudotime, with Benjamini-Hochberg correction across genes.
 
+    No figure is produced. The UMAP coordinates are written out as source data
+    so that plotting can be done separately.
 
 Input
     A directory holding one count matrix and one FPKM matrix per time point,
