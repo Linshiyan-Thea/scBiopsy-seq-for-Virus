@@ -1,10 +1,10 @@
 #!/usr/bin/env Rscript
 # ==============================================================================
-# scViralTracer-seq analysis pipeline
+# Longitudinal single-cell profiling of IAV infection: analysis pipeline
 # Bulk time course correlation of host genes with viral load
 # ------------------------------------------------------------------------------
 # Rationale
-#   scViralTracer-seq profiles one cell at a time, so the number of cells is
+#   This assay profiles one cell at a time, so the number of cells is
 #   small. A conventional bulk RNA-seq time course covers the same infection
 #   with many more replicates per time point and therefore provides an
 #   independent readout. If a host gene tracks the viral load in the bulk time
@@ -49,19 +49,6 @@
 #   Rscript bulk_gene_viral_correlation.R \
 #           --fpkm /path/to/bulk_fpkm.xlsx \
 #           --output-dir ./results_bulk
-#
-# Optional flags
-#   --viral-gene NAME        row name of the viral load proxy (default WSN_NP)
-#   --time-pattern REGEX     Perl regular expression whose first capture group
-#                            is the hours post infection
-#                            (default (?i)([0-9]+)\s*hpi)
-#   --time-values LIST       comma separated hours, used instead of parsing the
-#                            sample names. The order must match the column order
-#   --min-corr 0.95          minimum Pearson r for a gene to be retained
-#   --direction positive     positive, negative or both
-#   --max-fdr 0.05           maximum Benjamini-Hochberg q-value
-#   --query-genes LIST       comma separated genes to report individually
-#                            (default IFRD2)
 # ==============================================================================
 
 # Load the shared helpers from the repository root.
