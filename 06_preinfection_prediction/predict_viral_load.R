@@ -1,12 +1,12 @@
 #!/usr/bin/env Rscript
 # ==============================================================================
-# scViralTracer-seq analysis pipeline
+# Longitudinal single-cell profiling of IAV infection: analysis pipeline
 # Predicting viral load from the pre-infection transcriptome
 # ------------------------------------------------------------------------------
 # Rationale
 #   Conventional single-cell RNA sequencing destroys the cell, so the state a
 #   cell was in before infection can never be linked to the viral load it later
-#   supported. scViralTracer-seq records both from the same cell, which makes
+#   supported. This assay records both from the same cell, which makes
 #   it possible to ask whether the pre-infection transcriptome predicts how
 #   much virus that cell will produce.
 #
