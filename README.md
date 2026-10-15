@@ -1,9 +1,9 @@
-# scViralTracer-seq analysis pipeline
+# Longitudinal single-cell profiling of IAV infection: analysis pipeline
 
-Code accompanying the manuscript **"scViralTracer-seq: single-cell tracing of viral
-infection dynamics via time-resolved RNA-seq"**.
+Code accompanying the manuscript on longitudinal single-cell profiling of influenza A
+virus (IAV) infection.
 
-scViralTracer-seq withdraws a defined volume of cytoplasm from one living cell with an
+scBiopsy-seq withdraws a defined volume of cytoplasm from one living cell with an
 electric-field-driven nanopipette, so the same cell can be sequenced before infection and
 again at several hours post infection (hpi). The repository holds every analysis step that
 turns those libraries into the numbers reported in the paper: read processing and library
@@ -64,7 +64,7 @@ input, `.xlsx` output, or parallel execution.
 Used by step 04. Tested with Python 3.10.
 
 ```bash
-conda env create -f env/environment.yml && conda activate scviraltracer
+conda env create -f env/environment.yml && conda activate iav-longitudinal
 # or, without conda
 pip install -r env/requirements.txt
 ```
@@ -78,7 +78,6 @@ pip install -r env/requirements.txt
 ```
 .
 ├── README.md
-├── env/
 │   ├── environment.yml                 conda environment for Python and the CLI tools
 │   ├── requirements.txt                pip equivalent for the Python part
 │   └── install_r_packages.R            one-shot R dependency installer
@@ -519,14 +518,6 @@ they are recorded here.
    function from a package it deliberately did not load. The metric is now defined locally.
 
 ---
-
-## Citation
-
-If you use this code, please cite the manuscript. The diffusion pseudotime method is
-described in
-
-> Haghverdi L, Büttner M, Wolf FA, Buettner F, Theis FJ. Diffusion pseudotime robustly
-> reconstructs lineage branching. *Nat Methods*. 2016;13(10):845-848. doi:10.1038/nmeth.3971
 
 ## Licence
 
