@@ -46,23 +46,6 @@
 #           --fpkm /path/to/merged_fpkm.csv \
 #           --output-dir ./results_classification
 #
-# Optional flags
-#   --classify-gene NAME   row name of the marker gene whose log1p-transformed
-#                        FPKM drives the classification. When omitted, the NP
-#                        row is located by suffix, so NP, WSN_NP and IAV_NP all
-#                        work without further configuration.
-#   --viral-genes PB2,PB1,PA,HA,NP,NA,M,NS
-#                        explicit viral gene row names, used for the
-#                        per-segment validation. Takes precedence over
-#                        --viral-pattern
-#   --viral-pattern REGEX  row names matching this pattern are treated as viral
-#                        (default ^WSN_)
-#   --background-time N    time point used for the background distribution
-#                        (default: the smallest time point present)
-#   --classify-time N      time point at which cells are classified
-#                        (default: the largest time point present)
-#   --model-name E|V       mclust univariate model, E for equal variance,
-#                        V for varying variance (default E)
 # ==============================================================================
 
 # Load the shared helpers from the repository root.
