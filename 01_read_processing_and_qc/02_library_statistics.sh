@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# scViralTracer-seq analysis pipeline
+# Longitudinal single-cell profiling of IAV infection: analysis pipeline
 # Step 2 of 2 -- Consolidated per-library QC table
 # ------------------------------------------------------------------------------
 # What it does
