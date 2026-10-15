@@ -1,16 +1,16 @@
 #!/usr/bin/env Rscript
 # ==============================================================================
-# scViralTracer-seq analysis pipeline
+# Longitudinal single-cell profiling of IAV infection: analysis pipeline
 # Droplet based single-cell reference data as a platform control
 # ------------------------------------------------------------------------------
 # Rationale
-#   scViralTracer-seq follows one identified cell over time. A droplet based
+#   This assay follows one identified cell over time. A droplet based
 #   experiment profiles each cell once and therefore cannot link the state of a
 #   cell before infection to the viral load it later supports. The two platforms
 #   nevertheless share one measurement, namely how strongly each host gene
 #   tracks the viral load across the infected population. Reporting that number
 #   on a conventional droplet dataset puts the within-cell correlation obtained
-#   by scViralTracer-seq into context.
+#   by this assay into context.
 #
 # Method
 #   Two modes are supported.
@@ -55,14 +55,6 @@
 #           --matrix /path/to/tenx_fpkm.xlsx \
 #           --viral-gene NP \
 #           --output-dir ./results_tenx
-#
-# Optional flags
-#   --min-abs-corr 0.5     minimum absolute Pearson r for a gene to be retained
-#   --max-fdr 0.05         maximum Benjamini-Hochberg q-value
-#   --rank-limit 20        how many genes to list per direction in the top table
-#   --query-genes IFRD2    comma separated genes to report individually
-#   --viral-pattern REGEX  used to find the viral row when --viral-gene is not
-#                          given (default _NP$ or ^NP$)
 # ==============================================================================
 
 # Load the shared helpers from the repository root.
