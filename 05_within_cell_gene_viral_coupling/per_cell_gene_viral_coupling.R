@@ -1,12 +1,12 @@
 #!/usr/bin/env Rscript
 # ==============================================================================
-# scViralTracer-seq analysis pipeline
+# Longitudinal single-cell profiling of IAV infection: analysis pipeline
 # Within-cell coupling of host gene expression to viral load
 # ------------------------------------------------------------------------------
 # Rationale
 #   Comparing populations at each time point cannot reveal whether a host gene
 #   rises and falls together with the virus inside the same cell. Because
-#   scViralTracer-seq samples one cell repeatedly, the correlation can be
+#   the same cell is sampled repeatedly, the correlation can be
 #   computed within each cell along its own time course and then tested for
 #   consistency across cells. A gene that tracks the virus in most cells, in
 #   the same direction, is a candidate regulator rather than a bystander of the
@@ -48,16 +48,6 @@
 #   Rscript per_cell_gene_viral_coupling.R \
 #           --fpkm /path/to/merged_fpkm.xlsx \
 #           --output-dir ./results_coupling
-#
-# Optional flags
-#   --viral-gene NAME      row name of the viral load proxy (default: the row
-#                          matching --viral-pattern)
-#   --viral-pattern REGEX  used to find the NP row automatically (default _NP$)
-#   --min-mean-corr 0.7    minimum mean correlation across cells
-#   --max-fdr 0.01         maximum Benjamini-Hochberg q-value
-#   --min-cells 3          minimum number of cells with a usable coefficient
-#   --min-timepoints 2     minimum time points a cell must contribute
-#   --workers 1            parallel workers. One means sequential execution
 # ==============================================================================
 
 # Load the shared helpers from the repository root.
