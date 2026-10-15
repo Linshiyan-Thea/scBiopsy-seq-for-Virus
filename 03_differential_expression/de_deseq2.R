@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # ==============================================================================
-# scViralTracer-seq analysis pipeline
+# Longitudinal single-cell profiling of IAV infection: analysis pipeline
 # Differential expression analysis with DESeq2
 # ------------------------------------------------------------------------------
 # What it does
@@ -38,21 +38,6 @@
 #           --coldata /path/to/group_all.xlsx \
 #           --factor group --alt High --ref Low \
 #           --output-dir ./results_de
-#
-# Optional flags
-#   --lfc-cutoff 1         absolute log2 fold change threshold
-#   --padj-cutoff 0.05     adjusted p-value threshold
-#   --blocking cell        add a blocking factor to the design, giving
-#                          ~ blocking + group. Use this when the same cell is
-#                          sampled at several time points, which is exactly the
-#                          longitudinal design of scViralTracer-seq
-#   --min-cells-expressed all|N
-#                          keep a gene when it has a non-zero count in all
-#                          samples (default) or in at least N samples
-#   --min-total-count 20   keep a gene when its total count across samples
-#                          exceeds this value
-#   --independent-filtering TRUE|FALSE
-#                          DESeq2 independent filtering (default TRUE)
 # ==============================================================================
 
 # Load the shared helpers from the repository root.
