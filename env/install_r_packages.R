@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # ==============================================================================
-# scViralTracer-seq analysis pipeline -- R dependency installer
+# Longitudinal single-cell profiling of IAV infection -- R dependency installer
 # ------------------------------------------------------------------------------
 # Run once before using the pipeline.
 #
